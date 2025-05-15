@@ -17,7 +17,7 @@ if not firebase_admin._apps:
         "client_x509_cert_url": st.secrets.FIREBASE.client_x509_cert_url
     })
     firebase_admin.initialize_app(cred, {
-        'databaseURL': https://realtimevending-e2bc4-default-rtdb.firebaseio.com/
+        'databaseURL': st.secrets.FIREBASE.databaseURL
     })
 
 # Function to authenticate user
