@@ -2,7 +2,7 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 
-# Initialize Firebase app using st.secrets
+# Initialize Firebase
 if not firebase_admin._apps:
     cred = credentials.Certificate({
         "type": st.secrets.FIREBASE.type,
@@ -20,60 +20,21 @@ if not firebase_admin._apps:
         'databaseURL': st.secrets.FIREBASE.databaseURL
     })
 
-# Function to authenticate user
-def authenticate_user(username, password):
-    ref = db.reference("users")
-    users = ref.get()
-    if users:
-        for uid, user in users.items():
-            if user.get("Username") == username and user.get("password") == password:
-                return uid
-    return None
+# Get all user data from Firebase
+ref = db.reference("users")
+users = ref.get()
 
-# Function to get user data
-def get_user_data(uid):
-    return db.reference(f"users/{uid}").get()
+# Streamlit app
+st.title("Firebase User Data")
 
-# Streamlit App
-def app():
-    st.title("Realtime Vending Login")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-
-    if st.button("Login"):
-        uid = authenticate_user(username, password)
-        if uid:
-            user_data = get_user_data(uid)
-            st.success(f"Welcome {username}!")
-
-            bill = user_data.get("Bill")
-            product = user_data.get("product")
-            quantity = user_data.get("quantity")
-
-            if bill:
-                st.subheader("Your Purchase History:")
-                st.write(f"Product: {product}")
-                st.write(f"Quantity: {quantity}")
-                st.write("You have already purchased this product.")
-            else:
-                st.subheader("Your Current Order:")
-                st.write(f"Product: {product}")
-                st.write(f"Quantity: {quantity}")
-
-                new_product = st.text_input("Update Product", value=product)
-                new_quantity = st.number_input("Update Quantity", value=int(quantity), min_value=1)
-
-                if st.button("Place Order"):
-                    db.reference(f"users/{uid}").update({
-                        "product": new_product,
-                        "quantity": new_quantity,
-                        "Bill": True
-                    })
-                    st.success("Order placed successfully!")
-
-        else:
-            st.error("Invalid username or password.")
-
-if __name__ == "__main__":
-    app()
+if users:
+    for uid, data in users.items():
+        st.markdown("----")
+        st.write(f"**User ID**: `{uid}`")
+        st.write(f"**Username**: {data.get('Username')}")
+        st.write(f"**Password**: {data.get('password')}")
+        st.write(f"**Product**: {data.get('product')}")
+        st.write(f"**Quantity**: {data.get('quantity')}")
+        st.write(f"**Bill**: {data.get('Bill')}")
+else:
+    st.warning("No user data found in Firebase.")
