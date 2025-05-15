@@ -2,7 +2,7 @@ import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
 
-# Initialize Firebase
+# Initialize Firebase app using st.secrets
 if not firebase_admin._apps:
     cred = credentials.Certificate({
         "type": st.secrets.FIREBASE.type,
@@ -20,21 +20,25 @@ if not firebase_admin._apps:
         'databaseURL': st.secrets.FIREBASE.databaseURL
     })
 
-# Get all user data from Firebase
-ref = db.reference("users")
-users = ref.get()
+def app():
+    st.title("Display All Firebase Data")
 
-# Streamlit app
-st.title("Firebase User Data")
+    ref = db.reference("/")  # Root reference since users are stored at root
+    data = ref.get()
 
-if users:
-    for uid, data in users.items():
-        st.markdown("----")
-        st.write(f"**User ID**: `{uid}`")
-        st.write(f"**Username**: {data.get('Username')}")
-        st.write(f"**Password**: {data.get('password')}")
-        st.write(f"**Product**: {data.get('product')}")
-        st.write(f"**Quantity**: {data.get('quantity')}")
-        st.write(f"**Bill**: {data.get('Bill')}")
-else:
-    st.warning("No user data found in Firebase.")
+    if not data:
+        st.write("No data found in Firebase.")
+        return
+
+    # Display all data in a table-like format
+    for key, user in data.items():
+        st.subheader(f"User ID: {key}")
+        st.write(f"Username: {user.get('Username')}")
+        st.write(f"Password: {user.get('password')}")
+        st.write(f"Bill: {user.get('Bill')}")
+        st.write(f"Product: {user.get('product')}")
+        st.write(f"Quantity: {user.get('quantity')}")
+        st.markdown("---")
+
+if __name__ == "__main__":
+    app()
