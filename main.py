@@ -21,24 +21,34 @@ if not firebase_admin._apps:
     })
 
 def app():
-    st.title("Display All Firebase Data")
+    st.title("Login to View Your Data")
 
-    ref = db.reference("/")  # Root reference since users are stored at root
-    data = ref.get()
+    # Input fields for user
+    username_input = st.text_input("Username")
+    password_input = st.text_input("Password", type="password")
 
-    if not data:
-        st.write("No data found in Firebase.")
-        return
+    if st.button("Login"):
+        ref = db.reference("/")
+        data = ref.get()
 
-    # Display all data in a table-like format
-    for key, user in data.items():
-        st.subheader(f"User ID: {key}")
-        st.write(f"Username: {user.get('Username')}")
-        st.write(f"Password: {user.get('password')}")
-        st.write(f"Bill: {user.get('Bill')}")
-        st.write(f"Product: {user.get('product')}")
-        st.write(f"Quantity: {user.get('quantity')}")
-        st.markdown("---")
+        if not data:
+            st.error("No data found in Firebase.")
+            return
+
+        user_found = False
+
+        for key, user in data.items():
+            if str(user.get("Username")).strip().lower() == username_input.strip().lower() and str(user.get("password")) == password_input:
+                user_found = True
+                st.success(f"Welcome, {user.get('Username')}!")
+                st.write(f"User ID: {key}")
+                st.write(f"Bill: {user.get('Bill')}")
+                st.write(f"Product: {user.get('product')}")
+                st.write(f"Quantity: {user.get('quantity')}")
+                break
+
+        if not user_found:
+            st.error("Invalid username or password.")
 
 if __name__ == "__main__":
     app()
