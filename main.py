@@ -67,9 +67,7 @@ def app():
         st.write(f"**Product**: {user_data.get('product')}")
         st.write(f"**Quantity**: {user_data.get('quantity')}g")
         st.write(f"**Transaction ID**: {user_data.get('transaction_id')}")
-        quantity=user_data.get('transaction_id')
-        price = (quantity // 100) * 10
-        st.write(f"💰 Total Price: ₹{price}")
+        
     else:
         st.subheader("🛒 Place Your Order")
         product = st.selectbox("Select Product", ["Rice"])
