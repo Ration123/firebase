@@ -20,6 +20,7 @@ if not firebase_admin._apps:
         'databaseURL': st.secrets.FIREBASE.databaseURL
     })
 
+# Utility: Get UID from Firebase
 def get_user_uid(username, password):
     ref = db.reference("/")
     data = ref.get()
@@ -28,48 +29,69 @@ def get_user_uid(username, password):
             return uid
     return None
 
+# App starts here
 def app():
     st.title("Ration Ordering Portal")
 
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
+    # Session initialization
+    if "logged_in" not in st.session_state:
+        st.session_state.logged_in = False
+        st.session_state.uid = ""
+        st.session_state.username = ""
+        st.session_state.user_data = {}
 
-    if st.button("Login"):
-        uid = get_user_uid(username, password)
-        if uid:
-            user_ref = db.reference(f"/{uid}")
-            user_data = user_ref.get()
-
-            if user_data.get("Bill"):
-                st.success("Order already placed!")
-                st.write(f"Product: {user_data.get('product')}")
-                st.write(f"Quantity: {user_data.get('quantity')}g")
-                st.write(f"Transaction ID: {user_data.get('transaction_id')}")
+    # If not logged in, show login form
+    if not st.session_state.logged_in:
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        if st.button("Login"):
+            uid = get_user_uid(username, password)
+            if uid:
+                user_ref = db.reference(f"/{uid}")
+                user_data = user_ref.get()
+                st.session_state.logged_in = True
+                st.session_state.uid = uid
+                st.session_state.username = username
+                st.session_state.user_data = user_data
+                st.success(f"Welcome, {username}!")
             else:
-                st.subheader("Place Your Order")
-                product = st.selectbox("Select Product", ["Rice"])
-                quantity = st.number_input("Enter quantity in grams", min_value=100, step=100)
-                price = (quantity // 100) * 10
-                st.write(f"Total Price: ₹{price}")
+                st.error("Invalid username or password.")
+        return  # Stop further code until logged in
 
-                st.markdown("### Scan & Pay")
-                st.image("https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=keerthivasang2004@oksbi&pn=RationStore&am={}".format(price))
+    # User is logged in
+    user_data = st.session_state.user_data
+    user_ref = db.reference(f"/{st.session_state.uid}")
 
-                transaction_id = st.text_input("Enter UPI Transaction ID")
+    if user_data.get("Bill"):
+        st.success("✅ Order already placed!")
+        st.write(f"**Product**: {user_data.get('product')}")
+        st.write(f"**Quantity**: {user_data.get('quantity')}g")
+        st.write(f"**Transaction ID**: {user_data.get('transaction_id')}")
+    else:
+        st.subheader("🛒 Place Your Order")
+        product = st.selectbox("Select Product", ["Rice"])
+        quantity = st.number_input("Enter quantity in grams", min_value=100, step=100, key="quantity_input")
+        price = (quantity // 100) * 10
+        st.write(f"💰 Total Price: ₹{price}")
 
-                if st.button("Place Order"):
-                    if not transaction_id.strip():
-                        st.error("Please enter a valid UPI Transaction ID.")
-                    else:
-                        user_ref.update({
-                            "product": product,
-                            "quantity": quantity,
-                            "Bill": True,
-                            "transaction_id": transaction_id
-                        })
-                        st.success("Order placed successfully!")
-        else:
-            st.error("Invalid username or password.")
+        st.markdown("### 📲 Scan & Pay")
+        st.image(f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=upi://pay?pa=keerthivasang2004@oksbi&pn=RationStore&am={price}", caption="Scan with any UPI app")
+
+        transaction_id = st.text_input("Enter UPI Transaction ID", key="txn_input")
+
+        if st.button("Place Order"):
+            if not transaction_id.strip():
+                st.error("⚠️ Please enter a valid UPI Transaction ID.")
+            else:
+                user_ref.update({
+                    "product": product,
+                    "quantity": quantity,
+                    "Bill": True,
+                    "transaction_id": transaction_id
+                })
+                st.success("✅ Order placed successfully!")
+                # Refresh user data in session
+                st.session_state.user_data = user_ref.get()
 
 if __name__ == "__main__":
     app()
