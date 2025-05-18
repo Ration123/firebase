@@ -63,6 +63,10 @@ def app():
             st.info("You have already purchased this product.")
             st.write(f"Product: {user_data.get('product')}")
             st.write(f"Quantity: {user_data.get('quantity')}")
+            quantity={user_data.get('quantity')}
+            price = quantity * 10
+            st.write(f"Total Amount: ₹{price}")
+    
         else:
             st.subheader("Place Your Order")
             product = st.text_input("Enter Product")
