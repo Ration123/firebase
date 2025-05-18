@@ -32,7 +32,7 @@ def generate_qr_code(upi_id, name, amount):
 
 # Main App
 def app():
-    st.title("UPI Payment and Firebase Order System")
+    st.title("Rice Order with UPI Payment (Firebase Connected)")
 
     username_input = st.text_input("Username")
     password_input = st.text_input("Password", type="password")
@@ -62,20 +62,22 @@ def app():
         if user_data.get("Bill") is True:
             st.info("You have already purchased this product.")
             st.write(f"Product: {user_data.get('product')}")
-            st.write(f"Quantity: {user_data.get('quantity')}")
+            st.write(f"Quantity: {user_data.get('quantity')} grams")
             quantity={user_data.get('quantity')}
             price = quantity * 10
             st.write(f"Total Amount: ₹{price}")
-    
+            if "transaction_id" in user_data:
+                st.write(f"Transaction ID: {user_data.get('transaction_id')}")
         else:
             st.subheader("Place Your Order")
-            product = st.text_input("Enter Product")
-            quantity = st.number_input("Enter Quantity", min_value=1, step=1)
 
-            if product and quantity:
-                # Assuming price = 50 INR per quantity
-                price = quantity * 10
-                st.write(f"Total Amount: ₹{price}")
+            product = st.selectbox("Select Product", ["Rice"])
+            quantity = st.number_input("Enter Quantity in grams (e.g., 100, 200)", min_value=100, step=100)
+
+            if quantity:
+                # Price: ₹10 per 100g
+                price = (quantity // 100) * 10
+                st.write(f"Total Price: ₹{price}")
 
                 st.write("Scan the QR code to pay:")
                 qr_img = generate_qr_code("keerthivasang2004@oksbi", "Keerthi Store", price)
@@ -89,7 +91,7 @@ def app():
                     else:
                         db.reference(f"{uid}").update({
                             "product": product,
-                            "quantity": quantity,
+                            "quantity": str(quantity),
                             "Bill": True,
                             "transaction_id": txn_id
                         })
