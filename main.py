@@ -1,8 +1,10 @@
 import streamlit as st
 import firebase_admin
 from firebase_admin import credentials, db
+import qrcode
+from io import BytesIO
 
-# Initialize Firebase app
+# Firebase Initialization
 if not firebase_admin._apps:
     cred = credentials.Certificate({
         "type": st.secrets.FIREBASE.type,
@@ -20,37 +22,74 @@ if not firebase_admin._apps:
         'databaseURL': st.secrets.FIREBASE.databaseURL
     })
 
+# Generate QR Code
+def generate_qr_code(upi_id, name, amount):
+    upi_link = f"upi://pay?pa={upi_id}&pn={name}&am={amount}&cu=INR"
+    qr = qrcode.make(upi_link)
+    buffer = BytesIO()
+    qr.save(buffer)
+    return buffer
+
+# Main App
 def app():
-    st.title("Firebase Login")
+    st.title("UPI Payment and Firebase Order System")
 
     username_input = st.text_input("Username")
     password_input = st.text_input("Password", type="password")
 
     if st.button("Login"):
-        ref = db.reference("/")  # root level where all users are listed
+        ref = db.reference("/")
         users = ref.get()
 
         if not users:
-            st.error("No data found in Firebase.")
+            st.error("No users found in Firebase.")
             return
 
-        matched = False
-
-        for uid, data in users.items():
-            stored_username = data.get("Username")
-            stored_password = str(data.get("password"))  # force to string for comparison
-
-            if stored_username == username_input and stored_password == str(password_input):
-                matched = True
-                st.success(f"Welcome {stored_username}!")
-                st.write(f"User ID: {uid}")
-                st.write(f"Bill: {data.get('Bill')}")
-                st.write(f"Product: {data.get('product')}")
-                st.write(f"Quantity: {data.get('quantity')}")
+        uid = None
+        user_data = None
+        for key, val in users.items():
+            if val.get("Username") == username_input and str(val.get("password")) == str(password_input):
+                uid = key
+                user_data = val
                 break
 
-        if not matched:
-            st.error("Username or password incorrect.")
+        if not uid:
+            st.error("Invalid username or password.")
+            return
+
+        st.success(f"Welcome {user_data.get('Username')}!")
+
+        if user_data.get("Bill") is True:
+            st.info("You have already purchased this product.")
+            st.write(f"Product: {user_data.get('product')}")
+            st.write(f"Quantity: {user_data.get('quantity')}")
+        else:
+            st.subheader("Place Your Order")
+            product = st.text_input("Enter Product")
+            quantity = st.number_input("Enter Quantity", min_value=1, step=1)
+
+            if product and quantity:
+                # Assuming price = 50 INR per quantity
+                price = quantity * 10
+                st.write(f"Total Amount: ₹{price}")
+
+                st.write("Scan the QR code to pay:")
+                qr_img = generate_qr_code("keerthivasang2004@oksbi", "Keerthi Store", price)
+                st.image(qr_img, caption="Scan this with any UPI app")
+
+                txn_id = st.text_input("Enter UPI Transaction ID after payment")
+
+                if st.button("Place Order"):
+                    if txn_id.strip() == "":
+                        st.error("Please enter a valid UPI transaction ID.")
+                    else:
+                        db.reference(f"{uid}").update({
+                            "product": product,
+                            "quantity": quantity,
+                            "Bill": True,
+                            "transaction_id": txn_id
+                        })
+                        st.success("Order placed and updated in Firebase!")
 
 if __name__ == "__main__":
     app()
