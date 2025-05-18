@@ -1,5 +1,5 @@
 streamlit
 firebase-admin
 altair
-qr code
+qrcode
 
